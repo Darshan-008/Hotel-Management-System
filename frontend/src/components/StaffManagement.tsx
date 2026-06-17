@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Users, Mail, Lock, User, AlertTriangle, ShieldCheck, RefreshCw } from 'lucide-react';
+import { UserPlus, Users, Mail, Lock, User, AlertTriangle, ShieldCheck, RefreshCw, Trash2 } from 'lucide-react';
 
 interface StaffMember {
   id: string;
@@ -11,10 +11,11 @@ interface StaffMember {
 
 interface StaffManagementProps {
   token: string | null;
+  currentUser: { id: string; name: string; email: string; role: string } | null;
   showToast: (type: 'success' | 'error', message: string) => void;
 }
 
-export const StaffManagement: React.FC<StaffManagementProps> = ({ token, showToast }) => {
+export const StaffManagement: React.FC<StaffManagementProps> = ({ token, currentUser, showToast }) => {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
 
@@ -119,6 +120,34 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ token, showToa
     }
   };
 
+  const handleDeleteStaff = async (id: string, name: string) => {
+    if (!token) return;
+    const confirmDelete = window.confirm(`Are you sure you want to remove staff member "${name}"?`);
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/auth/staff/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showToast('error', data.error || 'Failed to remove staff member');
+        return;
+      }
+
+      showToast('success', `Staff member ${name} removed successfully!`);
+      fetchStaff(); // Refresh list
+    } catch (error) {
+      console.error(error);
+      showToast('error', 'Network error removing staff member.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* View Header */}
@@ -139,7 +168,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ token, showToa
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form: Add New Staff (1/3 width) */}
-        <div className="bg-[#0d121f] border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-xl space-y-5">
+        <div className="bg-[#0d121f] border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-xl space-y-5 h-fit">
           <div className="flex items-center gap-2.5 pb-3 border-b border-slate-800">
             <div className="p-1.5 bg-gold-950/40 rounded-lg text-gold-400 border border-gold-500/10">
               <UserPlus className="w-4 h-4" />
@@ -245,7 +274,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ token, showToa
         </div>
 
         {/* List: Staff Members (2/3 width) */}
-        <div className="lg:col-span-2 bg-[#0d121f] border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-xl space-y-5 flex flex-col">
+        <div className="lg:col-span-2 bg-[#0d121f] border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-xl space-y-5 flex flex-col h-fit">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 bg-gold-950/40 rounded-lg text-gold-400 border border-gold-500/10">
@@ -263,7 +292,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ token, showToa
             </button>
           </div>
 
-          <div className="flex-1 overflow-x-auto">
+          <div className="overflow-x-auto w-full">
             {isLoadingList && staffList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-slate-550 space-y-2">
                 <RefreshCw className="w-8 h-8 text-gold-500 animate-spin" />
@@ -278,13 +307,14 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ token, showToa
                 </div>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[550px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-3xs text-slate-550 uppercase tracking-wider">
                     <th className="py-2.5 font-semibold">Staff Name</th>
                     <th className="py-2.5 font-semibold">Email</th>
                     <th className="py-2.5 font-semibold">Authority</th>
                     <th className="py-2.5 font-semibold">Date Registered</th>
+                    <th className="py-2.5 font-semibold text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-850 text-xs text-slate-300">
@@ -304,6 +334,19 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ token, showToa
                       </td>
                       <td className="py-3 text-slate-500 text-3xs font-mono">
                         {new Date(staff.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 text-right">
+                        {currentUser && currentUser.id !== staff.id ? (
+                          <button
+                            onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                            className="p-1 text-slate-400 hover:text-rose-400 transition-colors rounded hover:bg-rose-950/20 border border-transparent hover:border-rose-900/30 cursor-pointer"
+                            title={`Remove ${staff.name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <span className="text-3xs text-slate-500 italic font-medium pr-2 select-none">You</span>
+                        )}
                       </td>
                     </tr>
                   ))}

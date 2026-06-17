@@ -196,3 +196,42 @@ export const getStaffList = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to retrieve staff list' });
   }
 };
+
+export const deleteStaff = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const requestingUserId = (req as any).user?.userId;
+
+    if (!requestingUserId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Safety check: prevent self-deletion
+    if (requestingUserId === id) {
+      return res.status(400).json({ error: 'You cannot remove your own administrative account' });
+    }
+
+    // Find the user to verify they exist and are staff/admin
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Staff member not found' });
+    }
+
+    if (targetUser.role !== 'admin') {
+      return res.status(400).json({ error: 'Only administrative accounts can be removed via this endpoint' });
+    }
+
+    // Delete the user
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    res.json({ message: `Staff member ${targetUser.name} removed successfully` });
+  } catch (error) {
+    console.error('Error deleting staff member:', error);
+    res.status(500).json({ error: 'Failed to remove staff member' });
+  }
+};

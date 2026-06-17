@@ -327,7 +327,7 @@ function App() {
           />
         );
       case 'staff':
-        return <StaffManagement token={token} showToast={showToast} />;
+        return <StaffManagement token={token} currentUser={user} showToast={showToast} />;
       default:
         return <div className="text-center py-12">Page not found</div>;
     }
