@@ -136,5 +136,9 @@ npm install
 # Start the Vite React client
 npm run dev
 ```
-
+```bash
+#Admin
+admin@grandpalace.com
+adminpassword
+```
 Open `http://localhost:5173` in your browser to explore the dashboard.
